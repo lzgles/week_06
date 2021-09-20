@@ -7,6 +7,8 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
+This assignment is due by 6 pm on the evening of the 7th class. It should be submitted via Github.
+
 #### Textbook
 
 -   [Chapter 14 - Strings](https://r4ds.had.co.nz/strings.html)
