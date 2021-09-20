@@ -1,0 +1,125 @@
+---
+title: "Week 06 Assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+#### Textbook
+
+-   [Chapter 14 - Strings](https://r4ds.had.co.nz/strings.html)
+-   [Chapter 15 - Factors](https://r4ds.had.co.nz/factors.html)
+-   [Chapter 16 - Dates and times](https://r4ds.had.co.nz/dates-and-times.html)
+
+
+#### Exercises
+
+```{r}
+if(! require("pacman")) install.packages("pacman")
+
+pacman::p_load(
+  tidyverse,
+  here
+)
+```
+
+1.  Describe some of the benefits of using functions.
+
+
+
+2.  Practice turning the following code snippets into functions. Think about what each function does. What would you call it? How many arguments does it need? Can you rewrite it to be more expressive or less duplicative?
+
+```{r}
+mean(is.na(x))
+
+x / sum(x, na.rm = TRUE)
+
+sd(x, na.rm = TRUE) / mean(x, na.rm = TRUE)
+```
+
+```{r}
+
+```
+
+
+3.  Read the source code for each of the following three functions, puzzle out what they do, and then brainstorm better names.
+
+```{r}
+f1 <- function(string, prefix) {
+  substr(string, 1, nchar(prefix)) == prefix
+}
+f2 <- function(x) {
+  if (length(x) <= 1) return(NULL)
+  x[-length(x)]
+}
+f3 <- function(x, y) {
+  rep(y, length.out = length(x))
+}
+```
+
+
+
+4.  Implement a fizzbuzz function. It takes a single number as input. If the number is divisible by three, it returns "fizz". If it's divisible by five it returns "buzz". If it's divisible by three and five, it returns "fizzbuzz". Otherwise, it returns the number. Make sure you first write working code before you create the function.
+
+```{r}
+
+```
+
+
+Let's revisit the COVID-19 data from last week.
+
+5.  Create a function that allows a user to ingest the confirmed cases and confirmed deaths data. The URLs for each CSV are below. Here are some requirements for the function:
+
+-   The user should be able to input whether they want to ingest `cases`, `deaths`, or `both`
+-   When `cases` is selected, the `cases` data should be returned as a dataframe
+-   When `deaths` is selected, the `deaths` data should be returned as a dataframe
+-   When `both` is selected, the `cases` data and `deaths` data should be returned as a single dataframe that is `union`-ed together
+-   Each record should indicate whether the data represents `cases` or `deaths` regardless of which case is selected
+
+```{r}
+confirmed <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_confirmed_US.csv"
+  
+  deaths <- "https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_time_series/time_series_covid19_deaths_US.csv"
+```
+
+```{r}
+
+```
+
+
+6.  Create a function that allows the user to select the geography or geographies that they would like to examine. Here are some requirements for the function.
+
+-   The function should include `County` and `State` parameters. There should be default values for these parameters.
+-   If the user indicates a state without a county, then all counties in the state should be returned.
+-   If the user indicates a county without a state, then the function should return all counties that match the criteria
+-   If the user indicates a county and a state, then the function should return the county that matches that criteria
+-   The end user should be able to indicate multiple counties and multiple states
+-   If the user's county and state combination does not yield a result
+
+```{r}
+
+```
+
+
+7.  Create a function that will tidy the COVID data. This function should:
+
+-   Pivot the data longer such that a `Date` field and a `Count` field are created
+-   Pivot the data wider such that multiple `Type` fields can be utilized
+-   Force the `Date` field to be of type Date
+
+```{r}
+
+```
+
+
+8.  Create a function that allows the user to graph their selected geographies as a line graph. Here are some requirements for the function.
+
+-   The function should return a line graph of all selected geographies
+-   The function should allow the user to select the field that should be graphed - `cases` or `deaths`
+
+```{r}
+
+```
+
