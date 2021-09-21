@@ -7,15 +7,6 @@ output: html_document
 knitr::opts_chunk$set(echo = TRUE)
 ```
 
-This assignment is due by 6 pm on the evening of the 7th class. It should be submitted via Github.
-
-#### Textbook
-
--   [Chapter 14 - Strings](https://r4ds.had.co.nz/strings.html)
--   [Chapter 15 - Factors](https://r4ds.had.co.nz/factors.html)
--   [Chapter 16 - Dates and times](https://r4ds.had.co.nz/dates-and-times.html)
-
-
 #### Exercises
 
 ```{r}
