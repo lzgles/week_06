@@ -1,19 +1,19 @@
-# Week 6 - Creating Functions
+# Week 6 - Manipulation of Strings, Factors, and Datetimes
 
 ## Description and Topics
 
-While packages provide a wide variety of functions, R becomes more powerful when you begin to build your own functions. Topics covered will include:
+Numeric values are not the only type of data that we must learn to manipulate. Data is often presented as strings, factors, or datetimes. Each of these data types can be manipulated in different ways. Topics covered will include:
 
--   Understand what functions are
--   Best practices for creating functions
--   Understand available tools for debugging functions
--   Building functions using non-standard evaluation using the embrace paradigm `{{`
+-   Understanding differences between strings and factors
+-   String manipulation utilizing the `stringr` package and string matching concepts utilizing regex
+-   Using `forcats` for factor manipulation
+-   Using `lubridate` to manipulate dates
 
 ## Assignment
 
 |                   |                           |
 |-------------------|---------------------------|
-| Points:           | 5                         |
+| Points:           | 10                         |
 | Display grade as: | Points                    |
 | Submission type:  | Via Github                |
 | Due date:         | November 8, 2021, 5:59 pm |
