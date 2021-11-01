@@ -1,0 +1,1917 @@
+<!DOCTYPE html>
+<html lang="" xml:lang="">
+  <head>
+    <title>Foundations of R</title>
+    <meta charset="utf-8" />
+    <meta name="author" content="Ryan Harrington" />
+    <meta name="date" content="2021-11-01" />
+    <script src="index_files/header-attrs/header-attrs.js"></script>
+    <script src="index_files/mark.js/mark.min.js"></script>
+    <link href="index_files/xaringanExtra-search/search.css" rel="stylesheet" />
+    <script src="index_files/xaringanExtra-search/search.js"></script>
+    <script>window.addEventListener('load', function() { window.xeSearch = new RemarkSearch({"position":"bottom-left","caseSensitive":false,"showIcon":true,"autoSearch":true}) })</script>
+    <script src="index_files/clipboard/clipboard.min.js"></script>
+    <link href="index_files/xaringanExtra-clipboard/xaringanExtra-clipboard.css" rel="stylesheet" />
+    <script src="index_files/xaringanExtra-clipboard/xaringanExtra-clipboard.js"></script>
+    <script>window.xaringanExtraClipboard(null, {"button":"<i class=\"fa fa-clipboard\"><\/i>","success":"<i class=\"fa fa-check\" style=\"color: #90BE6D\"><\/i>","error":"Press Ctrl+C to Copy"})</script>
+    <link href="index_files/font-awesome/css/all.css" rel="stylesheet" />
+    <link href="index_files/font-awesome/css/v4-shims.css" rel="stylesheet" />
+    <link href="index_files/tile-view/tile-view.css" rel="stylesheet" />
+    <script src="index_files/tile-view/tile-view.js"></script>
+    <link rel="stylesheet" href="xaringan-themer.css" type="text/css" />
+    <link rel="stylesheet" href="custom.css" type="text/css" />
+  </head>
+  <body>
+    <textarea id="source">
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+class: animated, fadeIn, content-slide
+layout: true
+
+---
+
+class: title-slide, middle
+layout: false
+
+# Foundations of R for Data Analysis
+
+### Week 06: Manipulation of Strings, Factors, and Datetimes
+
+Ryan Harrington&lt;br&gt;
+November 1, 2021&lt;br&gt;
+University of Delaware&lt;br&gt;
+College of Professional &amp; Continuing Studies
+
+---
+
+class: content-slide
+
+# Questions We'll Answer Today
+
+### 📝 What are FOIA requests?&lt;br&gt;
+### 🧵 How can I manipulate strings?&lt;br&gt;
+### 🔤 How can I manipulate factors?&lt;br&gt;
+### 📆 How can I manipulate dates?&lt;br&gt;
+
+---
+
+class: content-slide
+
+# Review of Week 4 Assignment
+
+---
+
+class: content-slide
+
+# FOIA Requests
+
+The .text-highlight[Freedom of Information Act (FOIA)] allows constituents to gain access to the data that their government creates. Gaining access to this data comes through a process called a .text-highlight[FOIA request]. Making a FOIA request does not guarantee that the request will be fulfilled. There are many reasons that a request may be denied - from the data being unavailable to the data falling under executive privilege.
+
+--
+
+In Delaware, every government agency is required by law to keep a .text-highlight[FOIA log]. This log is a historical record of all FOIA requests that have been made to that agency. 
+
+--
+
+In an effort to better understand what data was commonly being FOIA requested, .text-highlight[Open Data Delaware made a FOIA request to as many agencies as possible for their FOIA logs]. Most of these FOIA-log-FOIA-requests were made on February 9, 2019 by David Ginzberg.
+
+As the FOIA-log-FOIA-requests have been fulfilled, we have the opportunity to analyze each agency's FOIA logs to better understand their data. 
+
+We'll be looking at the Office of Management and Budget's FOIA logs.
+
+
+---
+
+class: content-slide
+
+# Loading the data
+
+The FOIA Log data for OMB came as an Excel file, so we need to take advantage of the `readxl` package to read in the data.
+
+
+```r
+install.packages("readxl")
+library(readxl)
+```
+
+Similar to `readr::read_csv`, you can utilize `readxl::read_excel`. There are some additional arguments to explore for specific use cases (for example, to designate the `sheet`)
+
+
+```r
+foia_log_OMB &lt;- read_excel(here::here("Data", "OMB FOIA TRACKING 032719.xlsx"))
+```
+Let's get a `glimpse` of the data.
+
+
+```r
+glimpse(foia_log_OMB)
+```
+
+
+---
+
+class: content-slide
+
+# Column names
+
+Column names are unwieldy for two reasons:
+
+1. They are long. This makes them extremely descriptive, but annoying to work with.
+2. They utilize non-alphanumeric characters (for example, *, -, and §).
+
+Let's utilize `janitor::clean_names` to tidy up these issues.
+
+
+```r
+foia_log_OMB &lt;- clean_names(foia_log_OMB)
+```
+
+---
+
+class: content-slide
+
+# Column names
+
+Many of the column names are still quite unwieldy. We'll want to adjust these to make life a bit easier.
+
+
+```r
+foia_log_OMB &lt;-
+  foia_log_OMB %&gt;% 
+  rename("date_received" = date_written_request_received_by_agency,
+         "date_assigned" = assigned_date,
+         "division" = omb_division,
+         "date_review" = agency_review_date,
+         "is_noncustodial_record" = does_the_request_seek_non_custodial_records_from_dti_omb_or_any,
+         "noncustodial_provided_other_agency" = if_non_custodial_records_were_provided_by_another_agency_provid,
+         "date_response" = date_of_agency_response_to_requesting_party_under_34_of_policy,
+         "date_estimate_sent" = estimate_sent,
+         "all_requested_records_sent" = were_all_requested_records_provided_on_date_of_agency_s_respons,
+         "date_requested_records_not_provided" = if_all_requested_records_were_not_provided_as_of_date_of_agency,
+         "copying_fees" = copying_fees_note_1st_20_pages_free)
+```
+
+---
+
+class: content-slide
+
+# Cleaning data
+
+Each column should be checked individually to identify any cleaning opportunities. Start by looking at the structure of the dataset.
+
+
+```r
+glimpse(foia_log_OMB)
+```
+
+We see a mix of `dttm`, `chr`, `dbl`, and `logical` columns. Quickly reviewing each field, we see that the fields look like they largely make sense. However, `date_requested_records_not_provided` seems to be listed as a character field, when it may be more appropriate to list it as a date field. This is something we may have to deal with later.
+
+---
+
+class: content-slide
+
+# Determine `NA`s
+
+We should figure out how many `NA` values there are. You can use `across` for this. Combine this with the `t` function to create an easy to use list of `NA` values by column.
+
+
+```r
+foia_log_OMB %&gt;% 
+  summarize(across(everything(), ~sum(is.na(.)))) %&gt;% t()
+```
+
+Looking at this information, we notice a few things that are interesting or that we can assume.
+
+---
+
+class: content-slide
+
+# Determine `NA`s
+
+1. **`date_received`** is never `NA`. This makes sense!
+2. **`date_assigned`** is never `NA`. Every FOIA request that is made to OMB is assigned to a person.
+3. **`date_review`** is `NA` 11 times. Apparently, 11 FOIA requests were made and not reviewed.
+4. **`date_response`** is `NULL` 5 times. There have been 5 times where there was no response when a request was made.
+5. **`date_estimate_sent`** is `NA` 447 times. Most FOIA requests do not lead to a cost estimate.
+6. **`copying_fees`** is `NULL` 427 times. Most FOIA requests do not lead to copying fees.
+7. **`administrative_fees`** is `NA` 499 times. Similarly, this aligns with the `date_estimate_sent` field. It is interesting to note that while it is logical for all of these fields to have `NA` values, they are not `NULL` the same number of times. We should determine if there is a relationship between the three fields.
+8. **`date_of_final_disposition`** is `NA` 11 times. Apparently, 11 FOIA requests that were made did not require this to occur. It is interesting to note that the `date_review` field was also `NA` 11 times. Perhaps whenever one of these fields is `NA`, then the other is as well.
+9. **`documents`** is `NA` 523 times. This is the same number as how many rows there are in the full dataset. Therefore, we can discard the `documents` field.
+
+
+```r
+foia_log_OMB &lt;- foia_log_OMB %&gt;%
+  select(-documents)
+```
+
+---
+
+class: content-slide
+
+# Determining unique values
+
+Now, we explore the number of unique values in each column. Some of the columns have a large number of unique values. Others have much less. We might want to explore some of the columns with relatively few unique values to get a better understanding of the counts of each unique value. In doing so, we may find that some additional data cleaning is needed to ensure consistency within the dataset.
+
+
+```r
+foia_log_OMB %&gt;%  
+  summarize(across(everything(), ~length(unique(.)))) %&gt;% t()
+```
+
+Fields with a high number of unique values seem to be fields that seem likely to have a high number. For example, it makes sense that date fields would have a large number of values (`date_received`, `date_assigned`, etc.). Also, fields like `information_requested` make sense to have a high number of unique values.
+
+We might want to start with exploration of fields with a low number of unique values such as `assigned_to`, `division`, etc.
+
+---
+
+class: content-slide
+
+# Exploring `assigned_to`
+
+Of the different fields with a low number of unique values, we'll highlight the `assigned_to` field. This is a great example of why data cleaning is so important. It's helpful to start by understanding what unique values exist. Getting a `count` makes this easier.
+
+
+```r
+foia_log_OMB %&gt;%
+  count(assigned_to)
+```
+
+When observing the counts of each unique value in the `assigned_to` field, we can see that there should _really_ be 3 values - Bert, Jessica, and `NULL`. However, there are some clear data cleanliness issues with how Bert is spelled.
+
+---
+
+class: content-slide
+
+# Exploring `assigned_to`
+
+We could do this with `case_when`, like so:
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(assigned_to = case_when(
+    assigned_to == "Bert" ~ "Bert",
+    assigned_to == "Bert." ~ "Bert",
+    assigned_to == "Bert`" ~ "Bert",
+    TRUE ~ assigned_to
+  ))
+```
+This works, but can you imagine if there were a significant number more cases of people being heavy handed typing in Bert? You'd have to provide a case for each of these. That can be challenging. It introduces an opportunity for error into your code and makes your code less flexible.
+
+A better method is to directly manipulate the strings. For that, we need to learn more about strings and, ultimately, .text-highlight[regex].
+
+---
+
+class: content-slide
+
+# Strings: the basics
+
+Let's rewind and spend time talking about strings. Strings are simply characters. You create them by enclosing text in quotes. Single quotes or double quotes are both okay, though double quotes are used more frequently.
+
+
+```r
+hello &lt;- "Hello! I am a string! You can put a 'single quote' inside of me."
+goodbye &lt;- 'And I am a string with single quotes. You can put a "double quote" inside of me. Goodbye!'
+```
+
+Perhaps you need to use single quotes in your string that was created with single quotes (or vice-versa). You'll need to use an escape character, which is a `\`.
+
+
+```r
+single_in_single &lt;- 'I\'m using a single quote in my single quoted string'
+double_in_double &lt;- "\"This is a quote with a double quote in my quote\", said the man."
+```
+
+Of course, that means you also need to escape your backslash characters. You can see this by using `writeLines`.
+
+
+```r
+spock &lt;- "\\/"
+writeLines(spock)
+```
+
+---
+
+class: content-slide
+
+# `stringr`
+
+Base R has a series of functions that make it easier to work with functions, but the `stringr` package makes working with strings much simpler. This is primarily because it provides a consistent structure for the functions used to work with strings. You'll notice this pattern as we explore some of the functions.
+
+
+```r
+bus &lt;- c("the", "wheels", "on the bus", "go", "round", "and", "round")
+```
+
+You can get the length of each element in the list. Consider how this compares to `length`.
+
+
+```r
+str_length(bus)
+```
+
+You can combine strings:
+
+
+```r
+str_c("clap", "your", "hands")
+str_c("clap", "your", "hands", sep = " ")
+str_c(bus, collapse = " ")
+```
+
+---
+
+class: content-slide
+
+# `stringr`
+
+You can extract portions of strings:
+
+
+```r
+str_sub(bus, 1, 3)
+```
+
+You can change capitalization:
+
+
+```r
+str_to_upper(bus)
+str_to_title(bus)
+```
+
+---
+
+class: content-slide
+
+# regex: Regular Expressions
+
+All of these functions can be helpful. However, the real way to unlock the power of strings is by utilizing regular expressions, more frequently known as **regex**.
+
+Regex is not something that is unique to R. It has quite a long history originating in the 1950s. They provide a terse language to describe patterns in strings. Some examples:
+
+--
+
+**Matching a password:**
+
+```bash
+^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,12}$
+```
+
+--
+
+**Matching URLs**
+
+```bash
+^(http|https|ftp):[\/]{2}([a-zA-Z0-9\-\.]+\.[a-zA-Z]{2,4})(:[0-9]+)?\/?([a-zA-Z0-9\-\._\?\,\'\/\\\+&amp;amp;%\$#\=~]*)
+```
+
+--
+
+**Matching HTML tags**
+
+```bash
+&lt;([\w]+).*&gt;(.*?)&lt;\/\1&gt;
+```
+
+---
+
+class: content-slide
+
+# regex: Regular Expressions
+
+Our goal is going to be to use regex in order to clean our data. Specifically, we're going to revisit the example of the `assigned_to` field and the challenges surrounding "Bart".
+
+Before that, we're going to work our way through some examples of regex and how string matching works.
+
+There are plenty of tools that help you better understand regex. I often utilize [regex101.com](regex101.com) as I'm testing regex. We're going to do the same.
+
+We'll also be working through some of the examples at [regexone.com](regexone.com).
+
+---
+
+class: content-slide
+
+# regex: Matching Characters
+
+.left-column[
+**Goal:**
+
+| Task | Text |
+|------|------|
+|**Match** |abcdefg|
+|**Match** |abcde|
+|**Match** |abc |
+
+**Copy for regex101:**
+
+```r
+abcdefg
+abcde
+abc
+```
+]
+
+--
+
+.right-column[
+You'll note that we can directly match characters by utilizing typing them directly. We can match all three of the criteria by simply typing:
+
+
+```r
+abc
+```
+
+Here's how we might show this with `stringr`. We would utilize the `str_detect` function:
+
+
+```r
+example_1 &lt;- c("abcdefg", "abcde", "abc")
+str_detect(string = example_1, 
+           pattern = "abc")
+```
+]
+
+---
+
+class: content-slide
+
+# regex: Matching Digits
+
+.left-column[
+**Goal:**
+
+| Task | Text |
+|------|------|
+|**Match** |abc123xyz|
+|**Match** |define "123"|
+|**Match** |var g = 123 |
+
+**Copy for regex101:**
+
+```r
+abc123xyz
+define"123"
+var g = 123
+```
+]
+
+--
+
+.right-column[
+Similarly, we can match numbers by typing them directly. The following will match all answers.
+
+
+```r
+123
+```
+
+Here's how we might show this with `stringr`. We would utilize the `str_detect` function:
+
+
+```r
+example_2 &lt;- c("abc123xyz", 'define"123"', "var g = 123")
+str_detect(string = example_2, 
+           pattern = "123")
+```
+]
+
+---
+
+class: content-slide
+
+# regex: Matching With Wildcards
+
+.left-column[
+**Goal:**
+
+| Task | Text |
+|------|------|
+|**Match** |cat.|
+|**Match** |896.|
+|**Match** |?=+. |
+|Skip | abc1|
+
+**Copy for regex101:**
+
+```r
+cat.
+896.
+?=+.
+abc1
+```
+]
+
+--
+
+.right-column[
+We can match any character with a `.`, so it is known as the wildcard character. If we want to explicitly match a `.`, we will need to escape it by utilizing `\`. 
+
+In our example, note that we want to only match the first three, but not the last one. The first three all contain a `.`, but the last does not. We can take advantage of this to create our match.
+
+
+```r
+...\.
+```
+
+Here's how we might show this with `stringr`. Note that in R, you may need to use a double backslash. You have to escape the escape character in order to use it. This may not apply for R &gt;4.0.
+
+
+```r
+example_3 &lt;- c("cat.", "896.", "?=+.", "abc1")
+str_detect(string = example_3, 
+           pattern = "...\\.")
+```
+]
+
+---
+
+class: content-slide
+
+# regex: Matching Specific Characters
+
+.left-column[
+**Goal:**
+
+| Task | Text |
+|------|------|
+|**Match** | can|
+|**Match** | man|
+|**Match** | fan |
+|Skip | dan |
+|Skip | ran |
+|Skip | pan |
+
+**Copy for regex101:**
+
+```r
+can
+man
+fan
+dan
+ran
+pan
+```
+]
+
+--
+
+.right-column[
+Note that all of the options have a first letter that is different, but the final two letters are the same. We can take advantage of this for our match.
+
+By placing characters inside of square brackets, we indicate that we want any one of the characters listed there to match, but nothing else.
+
+
+```r
+[cmf]
+```
+
+Here's how we might show this with `stringr`:
+
+
+```r
+example_4 &lt;- c("can", "man", "fan", "dan", "ran", "pan")
+str_detect(string = example_4, 
+           pattern = "[cmf]")
+```
+]
+
+---
+
+class: content-slide
+
+# regex: Excluding specific characters
+
+.left-column[
+**Goal:**
+
+| Task | Text |
+|------|------|
+|**Match** | hog |
+|**Match** | dog |
+|Skip | bog |
+
+**Copy for regex101:**
+
+```r
+hog
+dog
+bog
+```
+]
+
+--
+
+.right-column[
+If we utilize the `^` character inside of square brackets, that tells the regex engine to NOT select whatever is inside of the brackets.
+
+
+```r
+[^b]og
+```
+
+Here's how we might show this with `stringr`:
+
+
+```r
+example_5 &lt;- c("hog", "dog", "bog")
+str_detect(string = example_5, 
+           pattern = "[^b]og")
+```
+]
+
+---
+
+class: content-slide
+
+# regex: Character Ranges
+
+.left-column[
+**Goal:**
+
+| Task | Text |
+|------|------|
+|**Match** | Ana |
+|**Match** | Bob |
+|**Match** | Cpc |
+|Skip | aax |
+|Skip | bby |
+|Skip | ccz |
+
+**Copy for regex101:**
+
+```r
+Ana
+Bob
+Cpc
+aax
+bby
+ccz
+```
+]
+
+--
+
+.right-column[
+In this example, our first three words are capitalized while our last three are not. Regex is case sensitive by default, so we can use this to our advantage. Another option is to utilize character ranges. If we include a dash between two numbers or letters inside of brackets (for example `[A-Z]`, `[n-w]`, `[0-7]`), then we will match everything between those characters or digits. Case sensitivity applies here as well!
+
+
+```r
+[A-Z]
+```
+
+Here's how we might show this with `stringr`:
+
+
+```r
+example_6 &lt;- c("Ana", "Bob", "Cpc", "aax", "bby", "ccz")
+str_detect(string = example_6, 
+           pattern = "[A-Z]")
+```
+]
+
+---
+
+class: content-slide
+
+# regex: Counting matches
+
+.left-column[
+**Goal:**
+
+| Task | Text |
+|------|------|
+|**Match** | wazzzzzup |
+|**Match** | wazzzup |
+|Skip | wazup |
+
+**Copy for regex101:**
+
+```r
+wazzzzzup
+wazzzup
+wazup
+```
+]
+
+--
+
+.right-column[
+The notable difference between these words is how many `z`s they include. We can specify how many times we want a character (or groups of characters, etc.) to match by using `{}`. A single number indicated inside of curly braces means we are looking for an exact match, i.e. `z{3}` would only match if z occurs 3 times consecutively. We can also match ranges, such as `z{1, 4}`. If we don't include an ending value, then we are okay with it matching infinite times.
+
+
+```r
+z{2,}
+```
+
+Here's how we might show this with `stringr`:
+
+
+```r
+example_7 &lt;- c("wazzzzzup", "wazzzup", "wazup")
+str_detect(string = example_7, 
+           pattern = "z{2,}")
+```
+]
+
+---
+
+class: content-slide
+
+# regex: Arbitrary Number of Matches
+
+.left-column[
+**Goal:**
+
+| Task | Text |
+|------|------|
+|**Match** | aaaabcc |
+|**Match** | aabbbbc |
+|**Match** | aacc |
+|Skip | a |
+
+**Copy for regex101:**
+
+```r
+aaaabcc
+aabbbbc
+aacc
+a
+```
+]
+
+--
+
+.right-column[
+We can build on the `{}` idea with the `+` and the `*`. The `+` requires that your selection matches 1 or more times while the `*` requires a match of 0 or more times. Note that `c` must match at least one time. we take advantage of that to make our selection.
+
+
+```r
+c+
+```
+
+Here's how we might show this with `stringr`:
+
+
+```r
+example_8 &lt;- c("aaaabcc", "aabbbbc", "aacc", "a")
+str_detect(string = example_8, 
+           pattern = "c+")
+```
+]
+
+---
+
+class: content-slide
+
+# Exploring `assigned_to`
+
+This is a good place to look back at the `assigned_to` field. We might summarize the problem as "Let's remove all non-alphabetical characters from the `assigned_to` field. We'll need an alternate to `str_detect` to make this happen. Instead, we'll use `str_remove` (or `str_remove_all` - check the vignette to understand the difference between the two.)
+
+Recall that we can take advantage of character ranges in regex. For example, `[A-Z]` would match all capital characters between A and Z. We can also take advantage of negation - it would be hard to enumerate everything we want to get rid of, but it's much easier to list everything to keep. Here's how we might do this:
+
+
+```r
+foia_log_OMB &lt;- foia_log_OMB %&gt;%
+  mutate(assigned_to = str_remove_all(string = assigned_to, pattern = "[^A-Za-z]"),
+         assigned_to = if_else(is.na(assigned_to), "None", assigned_to)) # Might as well fix the NA problem too
+```
+
+This regex will identify any characters in strings that are not alphabetical characters, whether they are capitalized or not. `str_remove_all` then removes those characters.
+
+After doing this, we can see that our data now correctly reflects that there are 3 values in the `assigned_to` field - Bert, Jessica, and None.
+
+---
+
+class: content-slide
+
+# Exploring `internally_reviewed_by`
+
+We see the same issue with the `internally_reviewed_by` field that we did with the `assigned_to` field.
+
+
+```r
+foia_log_OMB %&gt;% 
+  count(internally_reviewed_by)
+```
+
+This means that we can fix it using the same technique.
+
+
+```r
+foia_log_OMB &lt;-
+  foia_log_OMB %&gt;%
+  mutate(internally_reviewed_by = str_remove_all(string = internally_reviewed_by, pattern = "[^A-Za-z]"))
+```
+
+---
+
+class: content-slide
+
+# Exploring `division`
+
+We will need to repeat this procees for each field in order to ensure that our data is as clean as possible. Moving through the list of selected fields to explore, next is `division`.
+
+It is very clear that some of these unique values should actually be represented as the same value. An obvious example of this are all of the variations of "Director's Office". We could also do the same for "Benefits", "Pension", and "PHRST". Before doing this cleaning, there are 23 unique values. After consolidating this, we'll be able to see this number be reduced.
+
+
+```r
+foia_log_OMB &lt;-
+  foia_log_OMB %&gt;% 
+  mutate(division = case_when(
+    str_detect(division, pattern = "Dir") ~ "Director's Office",
+    str_detect(division, pattern = "Benefits") ~ "Benefits Office",
+    str_detect(division, pattern = "Pension") ~ "Pensions",
+    str_detect(division, pattern = "PHRST") ~ "PHRST",
+    str_detect(division, pattern = "HR") ~ "HRM",
+    str_detect(division, pattern = "OSP") ~ "OSP",
+    TRUE ~ division
+  ))
+```
+
+---
+
+class: content-slide
+
+# Exploring `is_noncustodial_record`
+
+Exploration of the `is_noncustodial_record` field shows that it can also be collapsed.
+
+The values tend to either be "Yes" or "No". We can see that we are running into issues with case sensitivity. Also, one record has additional explanation in it. For the purposes of this analysis, we will ignore this. However, it could be important to consider in a different analysis. Also worth noting, is that it may be more convenient for future analyses to code "Yes" values as `TRUE` and "No" values as `FALSE`. For now, we choose to not do this.
+
+
+```r
+foia_log_OMB &lt;-
+  foia_log_OMB %&gt;% 
+  mutate(is_noncustodial_record = case_when(
+    str_detect(string = is_noncustodial_record, pattern = "[Nn][Oo]") ~ "No",
+    str_detect(string = is_noncustodial_record,pattern = "[Yy][Ee][Ss]") ~ "Yes",
+    TRUE ~ is_noncustodial_record))
+```
+
+---
+
+class: content-slide
+
+# `all_requested_records_sent`
+
+For the `all_requested_records_sent` field, we see similar issues to the `is_noncustodial_record` field. However, this time there is even further detail provided.
+
+The best strategy for cleaning this data may be to separate the "Yes" or "No" answers from the detail included in the answer. This means that we need to create additional columns to handle the detail. Specifically, let's make two new columns: `all_requested_records_sent_flag` and `all_requested_records_sent_detail`.
+
+To create our flag column, it's worth understanding an additional function of the `^` operator. When it is outside of brackets, it means "start of the input". Its counterpart is the `$`, which means "end of the input". We'll take advantage of that here.
+
+---
+
+class: content-slide
+
+# `all_requested_records_sent`
+
+We'll start by making the `all_requested_records_sent_flag` field:
+
+
+```r
+foia_log_OMB &lt;-
+  foia_log_OMB %&gt;% 
+  mutate(all_requested_records_sent_flag = case_when(
+    str_detect(string = all_requested_records_sent, pattern = "^[Yy]") ~ "Yes",
+    str_detect(string = all_requested_records_sent, pattern = "^[Nn]") ~ "No",
+    str_detect(string = all_requested_records_sent, pattern = "^[Pp]") ~ "Partial",
+    str_detect(string = all_requested_records_sent, pattern = "^[^YyNnPp]") ~ "Other"
+    ))
+```
+
+---
+
+class: content-slide
+
+# `all_requested_records_sent`
+
+Next, we'll make the `all_requested_records_sent_detail` field:
+
+This time we'll need to take advantage of some of the quantifiers - `+` and `*` to help us out. We'll also need to use a special character to indicate when we need a space - `\s`.
+
+
+```r
+foia_log_OMB &lt;-
+  foia_log_OMB %&gt;% 
+    mutate(all_requested_records_sent_detail = str_remove(string = all_requested_records_sent,
+                                                          pattern = "^[YyNnPp][A-Za-z,]+[\\s]*"))
+```
+
+---
+
+class: content-slide
+
+# Exploring `current_status`
+
+Last, we check the `current_status` field. While there are a large number of unique values (82), there are appears to be a great deal of overlap between them. We can reduce the number of unique values here by grouping the different values of `current_status` together.
+
+We can split the `current_status` into two new fields - `current_status_overall` and `current_status_detail`.
+
+
+```r
+foia_log_OMB &lt;-
+  foia_log_OMB %&gt;%
+  mutate(current_status_overall = str_extract(string = current_status,
+                                              pattern = "^Closed|^Open|^Inactive"))
+```
+
+---
+
+class: content-slide
+
+# Exploring `current_status`
+
+
+```r
+foia_log_OMB &lt;-
+  foia_log_OMB %&gt;%
+  mutate(current_status_detail = case_when(
+           str_detect(string = current_status,
+                      pattern = "[Rr]ecords ([Ss]ent|[Ee]mail|[Pp]rovided)|[Ii]nformation [Ss]ent|[Rr]esponse[s]* [Ss]ent|reviewed|reside|responded|fulfilled") ~ "Sent",
+           str_detect(string = current_status, pattern = "[Pp]artial") ~ "Partial",
+           str_detect(string = current_status, pattern = "[Pp]ossession|no responsive") ~ "Not in possession",
+           str_detect(string = current_status, pattern = "[Nn][Oo][Tt]") ~ "Not sent",
+           str_detect(string = current_status, pattern = "^Open") ~ "Open",
+           str_detect(string = current_status, pattern = "[Ww]ithdrawn|withdrew") ~ "Withdrawn",
+           str_detect(string = current_status, pattern = "[Aa]gency|[Ww]eb|internet|DSCYTF|online|DHR|DOL") ~ "Referred elsewhere",
+           str_detect(string = current_status, pattern = "[Nn]o res[po]{2}nse") ~ "No response from requestor"
+         ))
+```
+
+---
+
+class: content-slide
+
+# Building your regex skills
+
+Regex is a skill that you can spend a significant amount of time building. With enough patience, you can do quite a bit of complicated things. It's like any other tool - there is a time and place to use it.
+
+Consider the example given in [R4DS about matching email addresses](https://r4ds.had.co.nz/strings.html#tools). This is possible, but there's probably a better way to do it.
+
+You can push this really far...for example, you could solve [Pokémon Blue with a single regex statement](https://www.youtube.com/watch?v=Q2g9d29UIzk) [(sort of)](https://github.com/hausdorff/pkmn-mu).
+
+![](https://www.youtube.com/watch?v=Q2g9d29UIzk)
+
+---
+
+class: content-slide
+
+# Building your regex skills
+
+.pull-left[
+Here are a couple of ways that you can grow your skills:
+
+1. Finish the [regexone](https://regexone.com/lesson/optional_characters?) tutorial
+
+2. Find a [cheatsheet](https://github.com/rstudio/cheatsheets/blob/main/strings.pdf) that you like. Reference it often, you'll learn it!
+
+3. [Regex Crossword](https://regexcrossword.com/) - great way to slowly level up your skills, particularly if you like puzzles
+
+4. [Regex Golf](https://alf.nu/RegexGolf) - another way to practice
+]
+.pull-right[
+.center[&lt;img src="images/regex_crossword.png"&gt;]
+]
+
+---
+
+class: content-slide
+
+# Who was assigned the most requests?
+
+Let's begin to graph some of our fields. Let's start by considering our newly cleaned `assigned_to` field.
+
+
+```r
+foia_log_OMB %&gt;% 
+  count(assigned_to) %&gt;% 
+  ggplot(aes(x = n,
+             y = assigned_to)) +
+  geom_col()
+```
+
+It's extremely clear that Bert has been assigned the most FOIA requests to review. It can often be valuable to reorder our bars such that they are in order by some feature.
+
+We can do this with **factors**.
+
+---
+
+class: content-slide
+
+# What are factors?
+
+Factors are `R`'s answer to categorical data. Very frequently, the data that you are working with has some order to it - something other than alphabetical order.
+
+A common example of this might be for a survey. Consider how often you have completed a survey where you are asked to rank some characteristic on a scale like this:
+
+
+```r
+likert &lt;- c(
+  "Strongly Agree",
+  "Agree",
+  "Neutral",
+  "Disagree",
+  "Strongly Disagree"
+)
+```
+
+There is inherent order to this data. Factors helps to set that order.
+
+---
+
+class: content-slide
+
+# What are factors?
+
+R understand the order of the data alphabetically without intervention. You can see this by passing our `likert` vector to `sort`:
+
+
+```r
+sort(likert)
+```
+
+This is clearly not in a useful order. If we were to try to work with this data, such as by building a graph of it, R would work with data in this order. To solve this problem, we need to create a factor.
+
+The `factor` function allows us to designate the `levels` of our data. The `levels` can be designated in the order that they are written.
+
+
+```r
+likert_leveled &lt;- factor(likert, levels = likert)
+```
+
+Note that when we sort the data now it appears in the proper order.
+
+
+```r
+sort(likert_leveled)
+```
+
+---
+
+class: content-slide
+
+# What are factors?
+
+You can create a factor by utilizing the `factor` function. Here's a fake dataset for us to work with temporarily.
+
+
+```r
+set.seed(1231)
+
+sample_survey &lt;-
+  data.frame(ID = 1:1000,
+             q1 = sample(likert, size = 1000, replace = T),
+             q2 = sample(likert, size = 1000, replace = T),
+             q3 = round(runif(1000, 1, 5)),
+             stringsAsFactors = F)
+```
+
+Let's try to graph how many responses to each option there are in `q1`:
+
+
+```r
+sample_survey %&gt;% 
+  ggplot(aes(y = q1)) +
+  geom_bar()
+```
+
+The order here is clearly incorrect. It would be much more natural to order them based upon the order of the Likert scale.
+
+---
+
+class: content-slide
+
+# What are factors?
+
+Here's how we can do this:
+
+
+```r
+sample_survey %&gt;% 
+  mutate(q1 = factor(q1, levels = likert)) %&gt;% 
+  ggplot(aes(y = q1)) +
+  geom_bar()
+```
+
+---
+
+class: content-slide
+
+# Back to Bert
+
+We can manually adjust the order by creating a vector as we did previously.
+
+
+```r
+assigned_order &lt;- c("Bert", "Jessica", "None")
+```
+
+And then use `mutate` to add in the levels to the `assigned_to` field.
+
+
+```r
+foia_log_OMB %&gt;% 
+  count(assigned_to) %&gt;% 
+  mutate(assigned_to = factor(assigned_to, levels = assigned_order)) %&gt;% 
+  ggplot(aes(x = n,
+             y = assigned_to)) +
+  geom_col()
+```
+
+---
+
+class: content-slide
+
+# Back to Bert
+
+This happened to not be particularly satisfying. We really need to reverse this order. Conveniently, there is an `fct_rev` function that does exactly this.
+
+
+```r
+foia_log_OMB %&gt;% 
+  count(assigned_to) %&gt;% 
+  mutate(assigned_to = fct_rev(assigned_to)) %&gt;% 
+  ggplot(aes(x = n,
+             y = assigned_to)) +
+  geom_col()
+```
+
+---
+
+class: content-slide
+
+# What does the current status look like?
+
+Try the same thing, but with the `current_status_detail` field. Start by building a graph:
+
+
+```r
+foia_log_OMB %&gt;% 
+  ggplot(aes(y = current_status_detail)) +
+  geom_bar()
+```
+
+In this case, ordering the levels by hand would be a bit more challenging. There are quite a few more levels than we had to deal with for Bert.
+
+What we'd really like to do is reorder our factors by the count of the `current_status_detail` field. In this case, we would want to use `fct_reorder`.
+
+
+```r
+foia_log_OMB %&gt;% 
+  count(current_status_detail) %&gt;% 
+  mutate(current_status_detail = fct_reorder(current_status_detail, n)) %&gt;% 
+  ggplot(aes(y = current_status_detail,
+             x = n)) +
+  geom_col()
+```
+
+---
+
+class: content-slide
+
+# How many divisions?
+
+Let's try the same thing, but with the `division` field. Start by building a graph, using `fct_reorder` to improve it:
+
+
+```r
+foia_log_OMB %&gt;% 
+  count(division) %&gt;% 
+  mutate(division = fct_reorder(division, n)) %&gt;% 
+  ggplot(aes(y = division,
+             x = n)) +
+  geom_col()
+```
+
+There is a bit of a long tail of factor levels here. We can simplify this graph and tell the most important part of the story by combining smaller factor levels together.
+
+---
+
+class: content-slide
+
+# How many divisions?
+
+First, we might recode the factor levels.
+
+You can recode 1:1, such that each old level has an unique new level. You can also collapse levels, such that each new level might correspond to multiple old levels.
+
+We'll be doing the second option here:
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(division = fct_recode(division,
+    "Other" = "BDPA",
+    "Other" = "ICO",
+    "Other" = "OSP",
+    "Other" = "PHRST",
+    "Other" = "SBO",
+    "Other" = "SPO"
+  )) %&gt;% 
+  count(division) %&gt;% 
+  mutate(division = fct_reorder(division, n)) %&gt;% 
+  ggplot(aes(y = division,
+             x = n)) +
+  geom_col()
+```
+
+The `fct_collapse` function would allow for a similar way to accomplish the same task.
+
+---
+
+class: content-slide
+
+# How many divisions?
+
+If you didn't have a logical reason to combine levels that was inherent to the data, but rather were doing it based upon combining small groups (or some other similar characteristic), you could automate the process of combining factor levels.
+
+`fct_lump` is a helpful function for this kind of task. By default it will lump together the smallest groups while still ensuring that the "Other" group is still the smallest.
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(division = fct_lump(division)) %&gt;% 
+  count(division)
+```
+You can also explicitly set a value for the number of groups to be created.
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(division = fct_lump(division, n = 6)) %&gt;% 
+  count(division)
+```
+
+There are a few variants of `fct_lump` that are worth exploring as well.
+
+---
+
+class: content-slide
+
+# Date fields
+
+Many of the remaining fields contain dates. Conveniently for us, they all include the word "date" in the column name.
+
+
+```r
+foia_log_OMB %&gt;% 
+  select(contains("date")) %&gt;% 
+  glimpse()
+```
+
+We've worked with dates a bit before, but we've only scratched the surface. We're going to explore some of the intricacies of dates and how to work with them in R.
+
+---
+
+class: content-slide
+
+# Date fields
+
+It is a rite of passage for any analyst or software developer to struggle with dates at some point. The reason is that dates are complicated.
+
+Dates are governed by a large number of rules - some are tied to physical phenomenon and some to geopolitical phenomenon.
+
+Even more complicated is when we have to work with *time*. It's not too bad when we're only working with one time zone, but once you have multiple it can be quite a problem.
+
+Further complicating things is that there are many ways that we indicate what date it is to the people around us. This changes by location and by custom. All of these layers lead to complications.
+
+Base R has a suite of tools that allow you to work with dates. I actually often use these and find them comfortable. The tidyverse solution for working with dates is called `lubridate`. It has quite a few nice tools that make life easier.
+
+---
+
+class: content-slide
+
+# Working with dates in base R
+
+Let's talk about today. We can write out today in a lot of different ways.
+
+
+```r
+"2021-11-01"
+"21/11/1"
+"1/11/21"
+"11/1/2021"
+"November 1, 2021"
+```
+
+You'll notice that all of these are written as strings, but we want R to recognize them as dates. We do this with the `as.Date` function.
+
+
+```r
+as.Date("2021-11-01")
+as.Date("21/11/1")
+as.Date("1/11/21")
+as.Date("11/1/2021")
+as.Date("November 1, 2021")
+```
+
+You'll notice that there are real challenges with most of these. Everything failed in some way except for our last option.
+
+---
+
+class: content-slide
+
+# Why does the last example work?
+
+In order to handle all of the complications that come with dates, an international standard was created called [**ISO 8601**](https://en.wikipedia.org/wiki/ISO_8601). This standard was originally built in 1988 and is maintained by the International Organization for Standardization (ISO).
+
+Dates that follow the `YYYY-MM-DD` pattern will always be easiest to work with.
+
+Dates that follow alternate patterns will present some challenges.
+
+---
+
+class: content-slide
+
+# How do we fix the other options?
+
+One option that we may explore is to manually set the format of dates ourselves. You'll note that `as.Date` includes a `format` argument.
+
+We adjust the formats by using date-time conversion functions. You can find these with the documentation for `strptime`.
+
+Let's take a look at them in turn to make the adjustments. 
+
+---
+
+class: content-slide
+
+# How do we fix the other options?
+
+We'll start with the example that worked and explore it further.
+
+
+```r
+as.Date("2021-11-01")
+```
+
+We already discussed that this date is in `YYYY-MM-DD` format. Note that the `format` function for `as.Date` includes `"%Y-%m-%d"` and `"%Y/%m/%d"` as options to check. These describe the `YYYY-MM-DD` format that we used. Here is the description of each component part from the `strptime` vignette:
+
+* `%Y` - Year with century.
+* `%m` - Month as decimal number (01–12).
+* `%d` - Day of the month as decimal number (01–31).
+
+Therefore an equivalent way to write this is:
+
+
+```r
+as.Date("2021-11-01", format = "%Y-%m-%d")
+```
+
+---
+
+class: content-slide
+
+# How do we fix the other options?
+
+Next, we have:
+
+
+```r
+as.Date("21/11/1")
+```
+
+This is close, but R seems to think that we're trying to work with a date from year 21 as opposed to 2021. Recall the default way that `as.Date` assigns date values. We'll need to adjust this.
+
+The key difference here is that we have a 2 digit year. The format is `YY-MM-DD`.
+
+
+```r
+as.Date("21/11/1", format = "%y/%m/%d")
+```
+
+
+---
+
+class: content-slide
+
+# How do we fix the other options?
+
+We'll be able to solve this one similarly:
+
+
+```r
+as.Date("1/11/21")
+```
+
+The largest difference is that we've reversed the order of the components. This is represented as `DD/MM/YY`. Reflect that in the format.
+
+
+```r
+as.Date("1/11/21", format = "%d/%m/%y")
+```
+
+---
+
+class: content-slide
+
+# How do we fix the other options?
+
+Next, we have:
+
+
+```r
+as.Date("11/1/2021")
+```
+
+Which is in the format `MM/DD/YYYY`
+
+
+```r
+as.Date("11/1/2021", format = "%m/%d/%Y")
+```
+
+---
+
+class: content-slide
+
+# How do we fix the other options?
+
+Finally, the one that looks most like a date that we would naturally write:
+
+
+```r
+as.Date("November 1, 2021")
+```
+
+We need a new symbol now:
+
+* `%B` - Full month name in the current locale
+
+
+```r
+as.Date("November 1, 2021", format = "%B %d, %Y")
+```
+
+---
+
+class: content-slide
+
+# `lubridate`: a better way to work with dates
+
+It can be a headache to keep track of all of the different symbols that you need to work with using conventional methods.
+
+The `lubridate` package simplifies this. It introduces a framework that makes it easy to identify parts of a date instead of requiring you to do the heavy lifting of labeling each part.
+
+Let's look back at our first example:
+
+
+```r
+ymd("2021-11-01")
+```
+
+The function `ymd` corresponds to what we're looking for: `y` for year, `m` for month, and `d` for day. Every permutation of this function exists, so we can easily adjust:
+
+
+```r
+ymd("21/11/1")
+dmy("1/11/21")
+mdy("11/1/2021")
+mdy("November 1, 2021")
+```
+
+
+---
+
+class: content-slide
+
+# What about times?
+
+So far we have only worked with dates. There are many applications where we need to work with times as well. In R, you will see datetimes have a class of either `POSIXct` (much more common) or `POSIXlt`. 
+
+To understand time in R, you have to understand how it is calculated. Everything relates back to "Unix time". Wikipedia explains:
+
+&gt; Unix time (also known as Epoch time, Posix time, seconds since the Epoch, or UNIX Epoch time) is a system for describing a point in time. .text-highlight[It is the number of seconds that have elapsed since the Unix epoch, excluding leap seconds. The Unix epoch is 00:00:00 UTC on 1 January 1970 (an arbitrary date).] Unix time is nonlinear with a leap second having the same Unix time as the second before it (or after it, implementation dependent), so that every day is treated as if it contains exactly 86400 seconds, with no seconds added to or subtracted from the day as a result of positive or negative leap seconds. Due to this treatment of leap seconds, Unix time is not a true representation of UTC.
+
+---
+
+class: content-slide
+
+# What about times?
+
+The `now` function will give you the current date-time. Hidden behind that is the number of seconds since the epoch.
+
+
+```r
+unclass(now())
+```
+
+If you supply this number with an `origin` of `1970-01-01` to the `as.POSIXct` function, it will recreate the time.
+
+
+```r
+as.POSIXct(1635799050, origin = "1970-01-01")
+```
+
+For this reason, times only exist *with* dates in R. There is no column type *just* for times.
+
+---
+
+class: content-slide
+
+# What about times?
+
+The `lubridate` functions that work with times follow a similar pattern to dates. You can mix and match `h` (hours), `m` (minutes), and `s` (seconds) to create the functions that you need.
+
+
+```r
+ymd_hms("2021-11-01 20:37:14")
+```
+
+---
+
+class: content-slide
+
+# Back to the FOIA dataset
+
+The dates in our dataset are actually formatted relatively well (mostly), so we don't have to worry about converting them. Instead, we should start working with them.
+
+Let's take a look at `date_received`.
+
+When are FOIA requests to OMB received?
+
+
+```r
+foia_log_OMB %&gt;% 
+  count(date_received) %&gt;% 
+  ggplot(aes(x = date_received,
+             y = n)) +
+  geom_line()
+```
+
+This is very sparse. We might want to analyze this from different time intervals. Let's create the same graph at different units of time.
+
+---
+
+class: content-slide
+
+# `date_received`
+
+We can extract the component parts of our date to make this possible. `lubridate` provides a variety of functions to make this possible:
+
+* `year` - extract the year
+* `month` - extract the month as a number
+* `mday` - extract the day of the month as a number
+* `yday` - extract the day of the year
+* `wday` - extract the day of the week
+
+**What year had the most FOIA requests received?**
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(year_received = year(date_received)) %&gt;% 
+  count(year_received) %&gt;% 
+  ggplot(aes(x = year_received,
+             y = n)) +
+  geom_col()
+```
+
+---
+
+class: content-slide
+
+# `date_received`
+
+We can extract the component parts of our date to make this possible. `lubridate` provides a variety of functions to make this possible:
+
+* `year` - extract the year
+* `month` - extract the month as a number
+* `mday` - extract the day of the month as a number
+* `yday` - extract the day of the year
+* `wday` - extract the day of the week
+
+**What month had the most FOIA requests received?**
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(month_received = month(date_received)) %&gt;% 
+  count(month_received) %&gt;% 
+  ggplot(aes(x = month_received,
+             y = n)) +
+  geom_col()
+```
+
+---
+
+class: content-slide
+
+# `date_received`
+
+We can extract the component parts of our date to make this possible. `lubridate` provides a variety of functions to make this possible:
+
+* `year` - extract the year
+* `month` - extract the month as a number
+* `mday` - extract the day of the month as a number
+* `yday` - extract the day of the year
+* `wday` - extract the day of the week
+
+**What month had the most FOIA requests received?**
+
+You can add labels in with the `label` argument.
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(month_received = month(date_received, label = T)) %&gt;% 
+  count(month_received) %&gt;% 
+  ggplot(aes(x = month_received,
+             y = n)) +
+  geom_col()
+```
+
+---
+
+class: content-slide
+
+# `date_received`
+
+We can extract the component parts of our date to make this possible. `lubridate` provides a variety of functions to make this possible:
+
+* `year` - extract the year
+* `month` - extract the month as a number
+* `mday` - extract the day of the month as a number
+* `yday` - extract the day of the year
+* `wday` - extract the day of the week
+
+**What day of the week had the most FOIA requests received?**
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(wday_received = wday(date_received, label = T)) %&gt;% 
+  count(wday_received) %&gt;% 
+  ggplot(aes(x = wday_received,
+             y = n)) +
+  geom_col()
+```
+
+---
+
+class: content-slide
+
+# `date_received`
+
+You may also want to round your dates. `lubridate` also provides a variety of solutions for this use case.
+
+* `floor_date` - round down
+* `round_date` - follow rounding rules
+* `ceiling_date` - round up
+
+We can apply each of these to the `date_received` field to see how they behave:
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(floor_month = floor_date(date_received, "month"),
+         round_month = round_date(date_received, "month"),
+         ceiling_month = ceiling_date(date_received, "month")) %&gt;% 
+  select(date_received, floor_month, round_month, ceiling_month)
+```
+
+I primarily utilize the `floor_date` function for this kind of work.
+
+---
+
+class: content-slide
+
+# `date_received`
+
+You may also want to round your dates. `lubridate` also provides a variety of solutions for this use case.
+
+* `floor_date` - round down
+* `round_date` - follow rounding rules
+* `ceiling_date` - round up
+
+**What month had the most FOIA requests received?**
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(month_received = floor_date(date_received, "month")) %&gt;% 
+  count(month_received) %&gt;% 
+  ggplot(aes(x = month_received,
+             y = n)) +
+  geom_line()
+```
+
+---
+
+class: content-slide
+
+# Differences in time
+
+The date fields in our dataset represent a sequential process. Requests are received, assigned, reviewed, and responded to. Estimates are then sent, records are provided (or not), and the request is completed.
+
+A natural question to ask is what does the typical timeline look like?
+
+To answer that question, we need take differences in time.
+
+This is as "easy" as simple addition or subtraction. However, because times can be complicated, the arithmetic can lead to weird challenges
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(assigned_diff = date_assigned - date_received,
+         .keep = "used")
+```
+
+If we want to evaluate the differences in units other than seconds, we can utilize `difftime`.
+
+This only works for calculating differences as "secs", "mins", "hours", "days", and "weeks".
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(assigned_diff = difftime(date_assigned, date_received, units = "days"),
+         .keep = "used")
+```
+
+---
+
+class: content-slide
+
+# Differences in time
+
+`lubridate` solves these potential problems with three concepts:
+
+&gt; * **durations**, which represent an exact number of seconds.
+&gt; * **periods**, which represent human units like weeks and months.
+&gt; * **intervals**, which represent a starting and ending point.
+
+
+
+```r
+foia_log_OMB %&gt;% 
+  mutate(assigned_diff = interval(ymd(date_assigned), ymd(date_received)),
+         .keep = "used") %&gt;% 
+  ggplot(aes(x = assigned_diff)) +
+  geom_histogram()
+```
+
+---
+
+class: content-slide
+
+# For next week
+
+Complete your assignment by 5:59 pm submitted via GitHub.
+
+#### Textbook
+-   [Chapter 19 - Functions](https://r4ds.had.co.nz/functions.html)
+
+---
+
+class: title-slide, middle
+layout: false
+
+# Foundations of R for Data Analysis
+
+### Week 06: Manipulation of Strings, Factors, and Datetimes
+
+Ryan Harrington&lt;br&gt;
+November 1, 2021&lt;br&gt;
+University of Delaware&lt;br&gt;
+College of Professional &amp; Continuing Studies
+    </textarea>
+<style data-target="print-only">@media screen {.remark-slide-container{display:block;}.remark-slide-scaler{box-shadow:none;}}</style>
+<script src="https://remarkjs.com/downloads/remark-latest.min.js"></script>
+<script>var slideshow = remark.create({
+"slideNumberFormat": "%current%/%total%",
+"highlightStyle": "github",
+"highlightLines": true,
+"ratio": "16:9",
+"countIncrementalSlides": true
+});
+if (window.HTMLWidgets) slideshow.on('afterShowSlide', function (slide) {
+  window.dispatchEvent(new Event('resize'));
+});
+(function(d) {
+  var s = d.createElement("style"), r = d.querySelector(".remark-slide-scaler");
+  if (!r) return;
+  s.type = "text/css"; s.innerHTML = "@page {size: " + r.style.width + " " + r.style.height +"; }";
+  d.head.appendChild(s);
+})(document);
+
+(function(d) {
+  var el = d.getElementsByClassName("remark-slides-area");
+  if (!el) return;
+  var slide, slides = slideshow.getSlides(), els = el[0].children;
+  for (var i = 1; i < slides.length; i++) {
+    slide = slides[i];
+    if (slide.properties.continued === "true" || slide.properties.count === "false") {
+      els[i - 1].className += ' has-continuation';
+    }
+  }
+  var s = d.createElement("style");
+  s.type = "text/css"; s.innerHTML = "@media print { .has-continuation { display: none; } }";
+  d.head.appendChild(s);
+})(document);
+// delete the temporary CSS (for displaying all slides initially) when the user
+// starts to view slides
+(function() {
+  var deleted = false;
+  slideshow.on('beforeShowSlide', function(slide) {
+    if (deleted) return;
+    var sheets = document.styleSheets, node;
+    for (var i = 0; i < sheets.length; i++) {
+      node = sheets[i].ownerNode;
+      if (node.dataset["target"] !== "print-only") continue;
+      node.parentNode.removeChild(node);
+    }
+    deleted = true;
+  });
+})();
+(function() {
+  "use strict"
+  // Replace <script> tags in slides area to make them executable
+  var scripts = document.querySelectorAll(
+    '.remark-slides-area .remark-slide-container script'
+  );
+  if (!scripts.length) return;
+  for (var i = 0; i < scripts.length; i++) {
+    var s = document.createElement('script');
+    var code = document.createTextNode(scripts[i].textContent);
+    s.appendChild(code);
+    var scriptAttrs = scripts[i].attributes;
+    for (var j = 0; j < scriptAttrs.length; j++) {
+      s.setAttribute(scriptAttrs[j].name, scriptAttrs[j].value);
+    }
+    scripts[i].parentElement.replaceChild(s, scripts[i]);
+  }
+})();
+(function() {
+  var links = document.getElementsByTagName('a');
+  for (var i = 0; i < links.length; i++) {
+    if (/^(https?:)?\/\//.test(links[i].getAttribute('href'))) {
+      links[i].target = '_blank';
+    }
+  }
+})();
+// adds .remark-code-has-line-highlighted class to <pre> parent elements
+// of code chunks containing highlighted lines with class .remark-code-line-highlighted
+(function(d) {
+  const hlines = d.querySelectorAll('.remark-code-line-highlighted');
+  const preParents = [];
+  const findPreParent = function(line, p = 0) {
+    if (p > 1) return null; // traverse up no further than grandparent
+    const el = line.parentElement;
+    return el.tagName === "PRE" ? el : findPreParent(el, ++p);
+  };
+
+  for (let line of hlines) {
+    let pre = findPreParent(line);
+    if (pre && !preParents.includes(pre)) preParents.push(pre);
+  }
+  preParents.forEach(p => p.classList.add("remark-code-has-line-highlighted"));
+})(document);</script>
+
+<script>
+slideshow._releaseMath = function(el) {
+  var i, text, code, codes = el.getElementsByTagName('code');
+  for (i = 0; i < codes.length;) {
+    code = codes[i];
+    if (code.parentNode.tagName !== 'PRE' && code.childElementCount === 0) {
+      text = code.textContent;
+      if (/^\\\((.|\s)+\\\)$/.test(text) || /^\\\[(.|\s)+\\\]$/.test(text) ||
+          /^\$\$(.|\s)+\$\$$/.test(text) ||
+          /^\\begin\{([^}]+)\}(.|\s)+\\end\{[^}]+\}$/.test(text)) {
+        code.outerHTML = code.innerHTML;  // remove <code></code>
+        continue;
+      }
+    }
+    i++;
+  }
+};
+slideshow._releaseMath(document);
+</script>
+<!-- dynamically load mathjax for compatibility with self-contained -->
+<script>
+(function () {
+  var script = document.createElement('script');
+  script.type = 'text/javascript';
+  script.src  = 'https://mathjax.rstudio.com/latest/MathJax.js?config=TeX-MML-AM_CHTML';
+  if (location.protocol !== 'file:' && /^https?:/.test(script.src))
+    script.src  = script.src.replace(/^https?:/, '');
+  document.getElementsByTagName('head')[0].appendChild(script);
+})();
+</script>
+  </body>
+</html>
