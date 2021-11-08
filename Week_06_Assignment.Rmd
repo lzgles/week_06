@@ -15,7 +15,8 @@ if(! require("pacman")) install.packages("pacman")
 pacman::p_load(
   tidyverse,
   here,
-  rvest
+  rvest,
+  fuzzyjoin
 )
 ```
 
@@ -27,13 +28,25 @@ pacman::p_load(
 - End with `ing` or `ise.`
 
 ```{r}
+- Start with a vowel.
+^[AaEeIiOoUu]
 
+- That only contain consonants. (Hint: thinking about matching “not”-vowels.)
+[^AaEeIiOoUu]
+
+- End with `ed`, but not with `eed.`
+[^e]ed$
+
+  
+- End with `ing` or `ise.
+(ing|ise)$
 ```
 
 
 2. Create a regular expression that will match telephone numbers as commonly written in the United States.
 
 ```{r}
+[0-9]{3}\-[0-9]{3}\-[0-9]{4}
 
 ```
 
@@ -44,6 +57,8 @@ We'll be exploring Bob Ross's paintings.
 ```{r}
 url <- "https://raw.githubusercontent.com/jwilber/Bob_Ross_Paintings/master/data/bob_ross_paintings.csv"
 
+happy_trees <- 
+read_csv("https://raw.githubusercontent.com/jwilber/Bob_Ross_Paintings/master/data/bob_ross_paintings.csv")
 
 ```
 
@@ -71,24 +86,289 @@ episode_list <- elements[str_detect(elements, "([A-Za-z]+ [0-9]{1,2}, [0-9]{4})"
 Name this dataframe `episode_list_df`.
 
 ```{r}
+episode_list_df <-
+as.data.frame(episode_list) %>%
+  slice(1:403) %>%
+  mutate(episode = str_extract(string = episode_list,
+                               pattern = "\"(.*)\"")) %>%
+  mutate(episode = str_remove_all(string = episode,
+                                  pattern = "\"")) %>%
+  mutate(air_date = str_extract(string = episode_list,
+                                    pattern = "\\((.*)\\)")) %>%
+  mutate(air_date = str_remove_all(string = air_date,
+                                   pattern = "[\\(]")) %>%
+  mutate(air_date = str_remove_all(string = air_date,
+                                   pattern = "[\\)].*")) %>%
+  mutate(air_date = as.Date(air_date, 
+                           format = "%B %d, %Y"))%>%
+  mutate(note = str_extract(string = episode_list,
+                            pattern = "\\).*")) %>%
+  mutate(note = str_remove_all(string = note,
+                               pattern = "^\\)")) %>%
+  mutate(note = str_remove_all(string = note,
+                               pattern = "\\-")) %>%
+  mutate(note = str_trim(string = note,
+                         side = "both")) %>%
+  select(!episode_list)
+  
+#So, this all worked, but it's a mess. There's got to be a better way to do this, right? I tried a bunch of different ways to try to grab just what was between the quotes or parentheses, but none of them worked. 
+
 
 ```
 
 5. Join the `paintings` dataframe to the `episode_list_df` dataframe.
 
 ```{r}
+happy_trees_clean <- 
+  happy_trees %>%
+  mutate(painting_title = str_remove_all(string = painting_title,
+                                         pattern = "The\\s")) %>%
+  mutate(painting_title = case_when(
+    painting_title == "Mt. McKinley" ~ "Mount McKinley",
+    painting_title == "Black and White Seascape" ~ "Black & White Seascape",
+    painting_title == "Evening at Sunset" ~ "Evening Sunset",
+    painting_title == "Misty Forest Oval" ~ "Misty Forest",
+    painting_title == "Mountain Mirage Wood Shape" ~ "Mountain Mirage",
+    painting_title == "Winter in Pastel" ~ "Pastel Winter",
+    painting_title == "Hide A Way Cove" ~ "Hide-a-Way Cove",
+    painting_title == "Golden Rays of Sunshine" ~ "Golden Rays of Sunlight",
+    TRUE ~ painting_title
+  ))
+
+episode_list_clean <- 
+  episode_list_df %>%
+  mutate(episode = str_remove_all(string = episode,
+                                         pattern = "The\\s")) %>%
+  mutate(episode = case_when(
+    episode == "Old Place Home" ~ "Old Home Place",
+    TRUE ~ episode
+  ))
+  
+bob_ross_joined <- 
+  stringdist_full_join(
+    x = episode_list_clean,
+    y = happy_trees_clean,
+    by = c("episode" = "painting_title")
+    )
+
+
 
 ```
 
 6. What was Bob Ross's favorite color to paint with in each season of his show? By year?
 
 ```{r}
+fave_by_season <- 
+bob_ross_joined %>%
+  group_by(season) %>%
+  summarize(across(Black_Gesso:Alizarin_Crimson, ~sum(. == TRUE))) %>%
+  ungroup() %>%
+  select(-season)
+
+fave_colors_s <- 
+colnames(fave_by_season)[max.col(fave_by_season, ties.method = "first")]
+
+fave_by_year <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  group_by(year) %>%
+  summarize(across(Black_Gesso:Alizarin_Crimson, ~sum(. == TRUE))) %>%
+  ungroup() %>%
+  select(-year)
+  
+fave_colors_y <- 
+  colnames(fave_by_year)[max.col(fave_by_year, ties.method = "first")]
 
 ```
 
 7. What words are used most frequently in the titles of his paintings? Did this change over time?
 
+I feel like I should have been able to answer this question, because I understand the material when it is presented in class. But I appear to have a large disconnect between understanding and application, because when it comes to the homework, I can't get anything to work. I could not answer questions 6 or 7 without Googling to find the right code and even with code that worked, I couldn't put things together in the kinds of pipes we've been using. 
+
 ```{r}
 
+
+# I found this and thought it was cool.
+
+install.packages("wordcloud")
+install.packages("tm")
+library(wordcloud)
+library(tm)
+
+wordcloud(bob_ross_joined$painting_title, scale = c(3, .3), min.freq = 50, colors = rainbow(30))
+
+# Here's another way to do it. And I couldn't figure anything out, so this is from stackoverflow.  
+
+sort(table(unlist(str_split(bob_ross_joined$painting_title, 
+                            pattern ="\\s"))), 
+     decreasing = T)
+
+# And here's a really dumb way to try to answer the question about changes over time because I couldn't figure that out either. 
+
+br1983 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1983")
+
+words1983 <- 
+sort(table(unlist(str_split(br1983$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1984 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1984")
+
+words1984 <- 
+sort(table(unlist(str_split(br1984$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1985 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1985")
+
+words1985 <- 
+sort(table(unlist(str_split(br1985$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1986 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1986")
+
+words1986 <- 
+sort(table(unlist(str_split(br1986$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1987 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1987")
+
+words1987 <- 
+sort(table(unlist(str_split(br1987$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1988 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1988")
+
+words1988 <- 
+sort(table(unlist(str_split(br1988$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1989 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1989")
+
+words1989 <- 
+sort(table(unlist(str_split(br1989$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1990 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1990")
+
+words1990 <- 
+sort(table(unlist(str_split(br1990$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1991 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1991")
+
+words1991 <- 
+sort(table(unlist(str_split(br1991$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1992 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1992")
+
+words1992 <- 
+sort(table(unlist(str_split(br1992$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1993 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1993")
+
+words1993 <- 
+sort(table(unlist(str_split(br1993$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+br1994 <- 
+bob_ross_joined %>%  
+  mutate(year = lubridate::year(air_date)) %>%
+  filter(year == "1994")
+
+words1994 <- 
+sort(table(unlist(str_split(br1994$painting_title, 
+                            pattern = "\\s"))), 
+     decreasing = T)
+
+
+
+
+df1983 <- 
+as.data.frame(words1983)
+df1984 <- 
+as.data.frame(words1984)
+df1985 <- 
+as.data.frame(words1985)
+df1986 <- 
+as.data.frame(words1986)
+df1987 <- 
+as.data.frame(words1987)
+df1988 <- 
+as.data.frame(words1988)
+df1989 <- 
+as.data.frame(words1989)
+df1990 <- 
+as.data.frame(words1990)
+df1991 <- 
+as.data.frame(words1991)
+df1992 <- 
+as.data.frame(words1992)
+df1993 <- 
+as.data.frame(words1993)
+df1994 <- 
+as.data.frame(words1994)
+
+
+top_ten_words_over_time <- 
+as.data.frame(c(df1983[1:10,], 
+                df1984[1:10,],
+                df1985[1:10,],
+                df1986[1:10,],
+                df1987[1:10,],
+                df1988[1:10,],
+                df1989[1:10,],
+                df1990[1:10,],
+                df1991[1:10,],
+                df1992[1:10,],
+                df1993[1:10,],
+                df1994[1:10,]
+                ))
+  
+    
 ```
 
