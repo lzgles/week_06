@@ -1,0 +1,164 @@
+---
+title: "Week 06 Assignment"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+This assignment is meant to reinforce our learnings from the first week of class while also providing additional background and support for using git.
+
+We will be using GitHub for submitting assignments. We will review assignment submission during our second class. You will submit this assignment at that time.
+
+#### Textbook
+
+
+#### Exercises
+
+```{r}
+if(! require("pacman")) install.packages("pacman")
+
+pacman::p_load(
+  tidyverse,
+  here,
+  rvest
+)
+```
+
+Create regular expressions to find all words that:
+
+- Start with a vowel.
+
+```{r}
+"^[aeiouyAEIOUY]"
+```
+
+- That only contain consonants. (Hint: thinking about matching “not”-vowels.)
+
+```{r}
+"^[^aeiouyAEIOUY]+$"
+```
+
+- End with `ed`, but not with `eed.`
+
+```{r}
+"[^eE][eE][dD]$"
+```
+
+- End with `ing` or `ise.`
+
+```{r}
+"[ing]|[ise]$"
+```
+
+
+Create a regular expression that will match telephone numbers as commonly written in the United States.
+
+```{r}
+"^(\+\d{1,2}\s)?\(?\d{3}\)?[\s.-]?\d{3}[\s.-]?\d{4}$"
+```
+
+
+We'll be exploring Bob Ross's paintings.
+
+Load the CSV of all of his paintings.
+
+```{r}
+url <- "https://raw.githubusercontent.com/jwilber/Bob_Ross_Paintings/master/data/bob_ross_paintings.csv"
+
+paintings <- read_csv(url)
+```
+
+The following code will extract each episode and its air date from the [Joy of Painting Wikipedia page](https://en.wikipedia.org/wiki/The_Joy_of_Painting).
+
+```{r}
+jop_url <- "https://en.wikipedia.org/wiki/The_Joy_of_Painting"
+
+webpage <- read_html(jop_url)
+
+elements <- 
+  webpage %>% 
+  html_elements("li") %>% 
+  html_text2() 
+
+episode_list <- elements[str_detect(elements, "([A-Za-z]+ [0-9]{1,2}, [0-9]{4})")]
+```
+
+Convert `episode_list` into a dataframe such that it includes the following columns:
+
+- `episode`: the name of the episode. Make sure to remove any extra characters (like quotes) and trim whitespace
+- `air_date`: the air date of the episode as a date field
+- `note`: any additional note
+
+Name this dataframe `episode_list_df`.
+
+```{r}
+episode_list_df <-
+  data.frame(episode = episode_list,
+             stringsAsFactors = F) %>% 
+  separate(col = episode,
+           into = c("episode", "air_date", "note"),
+           sep = "\\(|\\)") %>% 
+  mutate(episode = str_remove_all(episode, '"'),
+         episode = str_trim(episode, side = "both"),
+         air_date = as.Date(air_date, format = "%B %d, %Y")) %>% 
+  filter(str_detect(episode, "^[A-Za-z]"))
+```
+
+Join the `paintings` dataframe to the `episode_list_df` dataframe.
+
+```{r}
+joined_df <- 
+  paintings %>% 
+  left_join(episode_list_df, by = c("painting_title" = "episode"))
+```
+
+
+What was Bob Ross's favorite color to paint with in each season of his show? By year?
+
+```{r}
+joined_df %>%
+  group_by(season) %>%
+  summarise(
+    across(Black_Gesso:Alizarin_Crimson, ~sum(.)) ) %>% 
+  ungroup() %>% 
+  pivot_longer(cols = c(-season),
+               names_to = "color",
+               values_to = "count") %>% 
+  group_by(season) %>% 
+  filter(count == max(count)) %>% 
+  ungroup()
+```
+
+```{r}
+joined_df %>%
+  mutate(year = format(air_date, format = "%Y")) %>% 
+  group_by(year) %>%
+  summarise(
+    across(Black_Gesso:Alizarin_Crimson, ~sum(.)) ) %>% 
+  ungroup() %>% 
+  pivot_longer(cols = c(-year),
+               names_to = "color",
+               values_to = "count") %>% 
+  group_by(year) %>% 
+  filter(count == max(count)) %>% 
+  ungroup()
+```
+
+
+What words are used most frequently in the titles of his paintings? Did this change over time?
+
+```{r}
+joined_df %>% 
+  select(season, painting_title) %>% 
+  separate(painting_title, into = c("word1", "word2", "word3", "word4", "word5"), sep = " ") %>% 
+  pivot_longer(cols = starts_with("word")) %>% 
+  select(-name) %>% 
+  filter(! is.na(value)) %>% 
+  count(season, value) %>% 
+  group_by(season) %>% 
+  filter(value == max(value)) %>% 
+  ungroup()
+```
+
